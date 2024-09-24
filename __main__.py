@@ -4,7 +4,7 @@ import requests
 import discord
 from discord.ext import commands
 from discord.ext import tasks
-import mysql.connector
+import psycopg2
 import urllib.parse
 import signal
 import sys
@@ -21,6 +21,7 @@ HOST = os.getenv('DB_HOST')
 USER = os.getenv('DB_USER')
 PASSWORD = os.getenv('DB_PASSWORD')
 DATABASE = os.getenv('DB_NAME')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 def fetch_job_postings():
     params = {
@@ -75,35 +76,33 @@ def format_job_posting(job):
 db_conn = None
 
 # Initialize database connection
-db_conn = mysql.connector.connect(
-    host=os.getenv('DB_HOST'),  # Change this to your MySQL host
-    user=os.getenv('DB_USER'),  # Change this to your MySQL username
-    password=os.getenv('DB_PASSWORD'),  # Change this to your MySQL password
-    database=os.getenv('DB_NAME')  # Change this to your MySQL database name
-)
+db_conn = psycopg2.connect(DATABASE_URL)
 
 # Create table for posted jobs
 def init_db():
-    cursor = db_conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS posted_jobs (
-            job_id VARCHAR(255) PRIMARY KEY
-        )
-    ''')
-    db_conn.commit()
+    with db_conn.cursor() as cursor:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS posted_jobs (
+                job_id VARCHAR(255) PRIMARY KEY
+            )
+        ''')
+        db_conn.commit()
 
 # Check if job ID exists in the database
 def has_been_posted(job_id):
-    cursor = db_conn.cursor()
-    cursor.execute('SELECT 1 FROM posted_jobs WHERE job_id = %s', (job_id,))
-    result = cursor.fetchone()
-    return result is not None
+    with db_conn.cursor() as cursor:
+        cursor.execute('SELECT 1 FROM posted_jobs WHERE job_id = %s', (job_id,))
+        result = cursor.fetchone()
+        return result is not None
 
 # Add job ID to the database
 def mark_as_posted(job_id):
-    cursor = db_conn.cursor()
-    cursor.execute('INSERT IGNORE INTO posted_jobs (job_id) VALUES (%s)', (job_id,))
-    db_conn.commit()
+    with db_conn.cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO posted_jobs (job_id) VALUES (%s)
+            ON CONFLICT (job_id) DO NOTHING
+        ''', (job_id,))
+        db_conn.commit()
 
 print("about to initialize database!")
 # Initialize database on startup
