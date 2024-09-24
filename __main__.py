@@ -8,6 +8,7 @@ import mysql.connector
 import urllib.parse
 import signal
 import sys
+import webserver
 
 load_dotenv()
 ADZUNA_API_URL = "https://api.adzuna.com/v1/api/jobs/us/search/1"
@@ -195,4 +196,5 @@ signal.signal(signal.SIGINT, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
 
 if __name__ == '__main__':
+    webserver.keep_alive()
     bot.run(BOT_TOKEN)
