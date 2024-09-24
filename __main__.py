@@ -191,14 +191,18 @@ def close_db():
         db_conn = None
 
 # This function will be triggered when you stop the bot (CTRL+C)
+'''
 def handle_shutdown(signal, frame):
     print("Shutting down... closing PostgreSQL connection.")
     close_db()  # Close the database connection before shutting down
     sys.exit(0)
+'''
 
 # Register the signal handler for graceful shutdown (CTRL+C or termination)
+'''
 signal.signal(signal.SIGINT, handle_shutdown)
 signal.signal(signal.SIGTERM, handle_shutdown)
+'''
 
 if __name__ == '__main__':
     webserver.keep_alive()
