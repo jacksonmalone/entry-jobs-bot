@@ -72,7 +72,7 @@ def format_job_posting(job):
     return f"**{title}** at **{company}**\n📍 {location}\n{description}\n[Apply here]({url})\n"
 
 
-# Initialize the MySQL connection globally
+# Initialize the PostgreSQL connection globally
 db_conn = None
 
 # Initialize database connection
@@ -165,12 +165,18 @@ async def fetch_and_post_jobs():
 async def get_jobs(ctx):
     job_data = fetch_job_postings()  # Fetch jobs from API
     if job_data:
+        new_jobs_found = False  # Flag to track if new jobs are found
         for job in job_data['results']:
             job_id = job['id']
             if not has_been_posted(job_id):
                 job_post = format_job_posting(job)
                 await ctx.send(job_post)
                 mark_as_posted(job_id)  # Mark the job as posted
+                new_jobs_found = True  # Set flag to True if a new job is posted
+                
+        # Check if no new jobs were found
+        if not new_jobs_found:
+            await ctx.send("There are no new job listings at this time.")
     else:
         await ctx.send("Could not fetch job listings at this time.")
 
@@ -186,7 +192,7 @@ def close_db():
 
 # This function will be triggered when you stop the bot (CTRL+C)
 def handle_shutdown(signal, frame):
-    print("Shutting down... closing MySQL connection.")
+    print("Shutting down... closing PostgreSQL connection.")
     close_db()  # Close the database connection before shutting down
     sys.exit(0)
 
