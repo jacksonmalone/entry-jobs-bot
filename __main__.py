@@ -62,6 +62,42 @@ def fetch_job_postings():
         print("Failed to fetch job postings:", response.status_code)
         return None
 
+def fetch_job_postings_location(location):
+    params = {
+        'app_id': API_ID,
+        'app_key': APP_KEY,
+        "results_per_page": 20,
+        "what": "software",  # Customize search terms
+        "what_or": "engineer developer",
+        "what_exclude": "senior lead director principal sr",
+        "where": location, # user input location in ! command
+        "max_days_old": 7,
+        "category": "it-jobs",
+        "sort_by": "date",
+        "full_time": "1",
+        "contract": "1",
+    }
+    #response = requests.get(ADZUNA_API_URL, params=params)
+
+    # Manually encode the parameters
+    query_string = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+
+    # Complete URL
+    full_url = f"{ADZUNA_API_URL}?{query_string}"
+
+    # Send GET request to Adzuna API
+    response = requests.get(full_url)
+
+    # Raises HTTPError, if one occurs
+    response.raise_for_status()
+
+    if response.status_code == 200:
+        print("Successfully fetched job postings:", response.status_code)
+        return response.json()
+    else:
+        print("Failed to fetch job postings:", response.status_code)
+        return None
+
 def format_job_posting(job):
     title = job['title']
     location = job['location']['area'][-1]
@@ -116,32 +152,6 @@ intents.message_content = True
 # Initialize the bot with a command prefix
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-'''
-@bot.event
-async def on_ready():
-    print(f'Bot is ready! Logged in as {bot.user}')
-
-    # Fetch job postings when the bot starts
-    job_data = fetch_job_postings()
-    if job_data:
-        channel = bot.get_channel(CHANNEL_ID)  # Replace with your channel ID
-        for job in job_data['results']:
-            job_post = format_job_posting(job)
-            await channel.send(job_post)
-'''
-
-'''
-@bot.command(name='jobs')
-async def get_jobs(ctx):
-    job_data = fetch_job_postings()
-    if job_data:
-        for job in job_data['results']:
-            job_post = format_job_posting(job)
-            await ctx.send(job_post)
-    else:
-        await ctx.send("Could not fetch job listings at this time.")
-'''
-
 @tasks.loop(hours=24)  # Runs every 24 hours
 async def fetch_and_post_jobs():
     await bot.wait_until_ready()  # Ensure bot is fully ready
@@ -179,6 +189,22 @@ async def get_jobs(ctx):
             await ctx.send("There are no new job listings at this time.")
     else:
         await ctx.send("Could not fetch job listings at this time.")
+
+@bot.command(name="jobs")
+async def fetch_jobs(ctx, location: str):
+    await ctx.send(f"Looking for jobs in {location}...")
+
+    # Call the get_jobs function with the provided location
+    try:
+        job_data = fetch_job_postings_location(location)
+        if job_data and 'results' in job_data:
+            for job in job_data['results']:
+                job_post = format_job_posting(job)
+                await ctx.send(job_post)
+        else:
+            await ctx.send(f"No jobs found for {location}.")
+    except requests.exceptions.HTTPError as e:
+        await ctx.send(f"Error fetching jobs: {str(e)}")
 
 @bot.event
 async def on_ready():
