@@ -190,7 +190,7 @@ async def get_jobs(ctx):
     else:
         await ctx.send("Could not fetch job listings at this time.")
 
-@bot.command(name="jobsloc")
+@bot.command(name="jobslook")
 async def fetch_jobs_location(ctx, location: str):
     await ctx.send(f"Looking for jobs in {location}...")
 
